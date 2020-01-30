@@ -67,23 +67,22 @@ exp.get("/api/notes", async (req, res) => {
 exp.post("/api/notes", async (req, res) => {
     try{
         let noteToAdd = req.body;
-
-        console.log(noteToAdd);
+        //read existing notes from db and if empty, assign an empty array
         let noteList = await readFileAsync(path.join(__dirname, "./db/db.json"), "utf8");
         if (!noteList){
             noteList = [];
         }
         else{
+            //parse into object array
             noteList = JSON.parse(noteList);
         }
         noteToAdd.id = noteList.length;
-
+        //add received object to array
         noteList.push(noteToAdd);
-
+        //write back to db file
         await writefielAsync(path.join(__dirname, "./db/db.json"), JSON.stringify(noteList));
-        console.log(noteList);
-
-        return res.json(noteToAdd);
+        //return success code to client
+        return res.json(200);
     }
     catch (e) {
         console.log('error : '+ e);
@@ -91,10 +90,11 @@ exp.post("/api/notes", async (req, res) => {
     }
 });
 
+//delete object from array
 exp.delete("/api/notes/:id", async (req, res) => {
     try {
         let objectToDelete  = req.params;
-
+        //get the id of object to delete
         let idToDelete = parseInt(objectToDelete.id);
 
         let noteList = await readFileAsync(path.join(__dirname, "./db/db.json"), "utf8");
@@ -110,7 +110,6 @@ exp.delete("/api/notes/:id", async (req, res) => {
         }
         // find the index of note object to delete and delete
         let noteToDeleteIndex = noteList.findIndex(note => note.id ===idToDelete);
-        console.log('noteToDeleteIndex: '+ noteToDeleteIndex);
         noteList.splice(noteToDeleteIndex, 1);
 
         //re-order index of notes
