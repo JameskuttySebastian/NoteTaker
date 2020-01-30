@@ -27,6 +27,7 @@ exp.get("/", function(req, res) {
     res.sendFile(path.join(__dirname, '/public/index.html'), err =>{
         if (err) {
             console.error("Could not get public/index.html file, ", err);
+            res.sendStatus(400);
         }
     });
 });
@@ -37,26 +38,96 @@ exp.get("/notes", function(req, res) {
     res.sendFile(path.join(__dirname, '/public/notes.html'), err =>{
         if (err) {
             console.error("Could not get public/notes.html file, ", err);
+            res.sendStatus(400);
         }
     });
 });
 
 //Read data and send JSON data from db.json file
 exp.get("/api/notes", async (req, res) => {
-    let tableData = await readFileAsync(path.join(__dirname, "./db/db.json"), "utf8");
-    // console.log(JSON.parse(tableData));
-    return res.json(JSON.parse(tableData));
+    try{
+        let noteList = await readFileAsync(path.join(__dirname, "./db/db.json"), "utf8");
+        // console.log(JSON.parse(noteList));
+        if(!noteList){
+            noteList = '';
+        }
+        else{
+            noteList = JSON.parse(noteList);
+        }
+        return res.json(noteList);
+    }
+    catch (e) {
+        console.log('exp.get("/api/notes", async (req, res) => ' + e);
+        res.sendStatus(400);
+    }
 });
 
 
 //Read data and send JSON data from db.json file
 exp.post("/api/notes", async (req, res) => {
-    let noteToAdd = req.body;
-    console.log(noteToAdd);
-    let tableData = await readFileAsync(path.join(__dirname, "./db/db.json"), "utf8");
-    console.log(JSON.parse(tableData));
+    try{
+        let noteToAdd = req.body;
 
-    return res.json(noteToAdd);
+        console.log(noteToAdd);
+        let noteList = await readFileAsync(path.join(__dirname, "./db/db.json"), "utf8");
+        if (!noteList){
+            noteList = [];
+        }
+        else{
+            noteList = JSON.parse(noteList);
+        }
+        noteToAdd.id = noteList.length;
+
+        noteList.push(noteToAdd);
+
+        await writefielAsync(path.join(__dirname, "./db/db.json"), JSON.stringify(noteList));
+        console.log(noteList);
+
+        return res.json(noteToAdd);
+    }
+    catch (e) {
+        console.log('error : '+ e);
+        res.sendStatus(400);
+    }
+});
+
+exp.delete("/api/notes/:id", async (req, res) => {
+    try {
+        let objectToDelete  = req.params;
+
+        let idToDelete = parseInt(objectToDelete.id);
+
+        let noteList = await readFileAsync(path.join(__dirname, "./db/db.json"), "utf8");
+        // console.log(JSON.parse(noteList));
+        if (!noteList){
+            // at this point, there is nothing to delete
+            noteList = [];
+            return;
+        }
+        else{
+            //prepare read json file into an array
+            noteList = JSON.parse(noteList);
+        }
+        // find the index of note object to delete and delete
+        let noteToDeleteIndex = noteList.findIndex(note => note.id ===idToDelete);
+        console.log('noteToDeleteIndex: '+ noteToDeleteIndex);
+        noteList.splice(noteToDeleteIndex, 1);
+
+        //re-order index of notes
+        for (let note of noteList) {
+            note.id = noteList.indexOf(note) ;
+        }
+        // write file back to db
+        await writefielAsync(path.join(__dirname, "./db/db.json"), JSON.stringify(noteList));
+
+        // return message request was successful
+        res.sendStatus(200);
+    }
+    catch (e) {
+        console.log("Error in deleting note, ", e);
+        res.sendStatus(400);
+    }
+
 });
 
 // Starts the server to begin listening
